@@ -47,8 +47,7 @@ function calcSuggested({ buy, cm, ebay, marginPct, feePct, useMarket, capToMarke
   const margin = Math.max(0, toNum(marginPct)) / 100;
   const fee = Math.min(0.95, Math.max(0, toNum(feePct)) / 100);
 
-  // if fee is 100% we'd divide by 0; cap above.
-  const base = buy === 0 ? 0 : buy * (1 + margin) / (1 - fee);
+  const base = buy === 0 ? 0 : (buy * (1 + margin) / (1 - fee));
 
   const marketVals = [cm, ebay].filter(x => x > 0);
   const marketAvg = marketVals.length ? (marketVals.reduce((a,b)=>a+b,0) / marketVals.length) : 0;
@@ -56,10 +55,10 @@ function calcSuggested({ buy, cm, ebay, marginPct, feePct, useMarket, capToMarke
   let suggested = base;
 
   if (useMarket && marketAvg > 0) {
-    // Don't go "too low" compared to market: at least 90% of market average
+    // almeno 90% della media mercato
     suggested = Math.max(suggested, marketAvg * 0.90);
 
-    // Optional cap: avoid pricing too high vs market (max +10%)
+    // cap opzionale a +10% sulla media
     if (capToMarket) suggested = Math.min(suggested, marketAvg * 1.10);
   }
 
@@ -114,6 +113,40 @@ feePctEl.value = rules.feePct ?? 0;
 useMarketEl.checked = !!rules.useMarket;
 capToMarketEl.checked = !!rules.capToMarket;
 
+// ====== Google search buttons (Cardmarket / eBay) ======
+const searchCardmarketBtn = $("searchCardmarketBtn");
+const searchEbayBtn = $("searchEbayBtn");
+
+function buildSearchQueryForGoogle() {
+  const name = $("name").value.trim();
+  const set = $("set").value.trim();
+  const number = $("number").value.trim();
+  const lang = $("lang").value.trim();
+
+  // includo "pokemon" per risultati più puliti
+  const parts = ["pokemon", name, set, number, lang].filter(Boolean);
+  return parts.join(" ");
+}
+
+function openGoogleSearch(siteFilter) {
+  const q = buildSearchQueryForGoogle();
+  if (!q || q === "pokemon") {
+    alert("Compila almeno il nome della carta prima di cercare.");
+    return;
+  }
+  const fullQuery = `${q} ${siteFilter}`;
+  const url = `https://www.google.com/search?q=${encodeURIComponent(fullQuery)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
+}
+
+searchCardmarketBtn.addEventListener("click", () => {
+  openGoogleSearch("site:cardmarket.com");
+});
+
+searchEbayBtn.addEventListener("click", () => {
+  openGoogleSearch("site:ebay.it");
+});
+
 // ====== Live preview for form (suggested + profit) ======
 const liveInputs = ["buy","sell","cardmarket","ebay"];
 liveInputs.forEach(id => $(id).addEventListener("input", updateLivePreview));
@@ -152,8 +185,12 @@ function updateLivePreview() {
   const p = calcProfit({ buy, sell: sellToUse, feePct: rules.feePct });
 
   suggestedOut.textContent = suggested > 0 ? eur.format(suggested) : "—";
-  profitOut.textContent = (buy > 0 && sellToUse > 0) ? eur.format(p) : "—";
-  profitOut.className = (buy > 0 && sellToUse > 0) ? profitClass(p) : "";
+
+  // ✅ profitto anche con buy=0 (o in generale buy>=0)
+  // mostriamo profitto se almeno uno tra buy/sell è stato inserito
+  const shouldShow = ($("buy").value.trim() !== "" || $("sell").value.trim() !== "" || $("cardmarket").value.trim() !== "" || $("ebay").value.trim() !== "");
+  profitOut.textContent = shouldShow ? eur.format(p) : "—";
+  profitOut.className = shouldShow ? profitClass(p) : "";
 }
 
 // ====== Add item ======
@@ -171,19 +208,21 @@ form.addEventListener("submit", (e) => {
     lang: $("lang").value.trim(),
     cardmarket: round2(toNum($("cardmarket").value)),
     ebay: round2(toNum($("ebay").value)),
-    buy: round2(toNum($("buy").value)),
+    buy: round2(toNum($("buy").value)), // ✅ può essere 0
     // if user left blank, we store 0 (we'll use suggested in calculations)
     sell: $("sell").value.trim() === "" ? 0 : round2(toNum($("sell").value)),
   };
 
-  if (!item.name || item.buy < 0) return;
+  if (!item.name) return;
 
   inventory.unshift(item);
   saveInventory(inventory);
 
   form.reset();
   $("qty").value = 1;
-  $("condition").value = "NM";
+
+  // reset condizione default
+  $("condition").value = "near mint";
 
   updateLivePreview();
   render();
@@ -308,7 +347,6 @@ function startInlineEdit(td) {
   const item = inventory.find(x => x.id === id);
   if (!item) return;
 
-  // avoid double editor
   if (td.querySelector("input")) return;
 
   const input = document.createElement("input");
@@ -375,7 +413,7 @@ importFile.addEventListener("change", async (e) => {
     if (data && data.rules) {
       rules = { ...rules, ...data.rules };
       saveRules(rules);
-      // update UI
+
       marginPctEl.value = rules.marginPct ?? 20;
       feePctEl.value = rules.feePct ?? 0;
       useMarketEl.checked = !!rules.useMarket;

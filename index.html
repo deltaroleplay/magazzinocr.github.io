@@ -47,11 +47,13 @@
           <label>
             Condizione
             <select id="condition">
-              <option value="NM">NM</option>
-              <option value="LP">LP</option>
-              <option value="MP">MP</option>
-              <option value="HP">HP</option>
-              <option value="DMG">DMG</option>
+              <option value="poor">poor</option>
+              <option value="played">played</option>
+              <option value="light played">light played</option>
+              <option value="good">good</option>
+              <option value="excellent">excellent</option>
+              <option value="near mint" selected>near mint</option>
+              <option value="mint">mint</option>
             </select>
           </label>
         </div>
@@ -78,6 +80,16 @@
             Prezzo eBay (€)
             <input id="ebay" type="number" min="0" step="0.01" placeholder="0.00" />
           </label>
+        </div>
+
+        <!-- ✅ Nuovi tasti Google -->
+        <div class="row">
+          <button type="button" id="searchCardmarketBtn" class="btn btn-secondary">
+            Cerca su Google (Cardmarket)
+          </button>
+          <button type="button" id="searchEbayBtn" class="btn btn-secondary">
+            Cerca su Google (eBay)
+          </button>
         </div>
 
         <div class="row">
