@@ -82,6 +82,9 @@ function profitClass(p) {
 let inventory = loadInventory();
 let rules = loadRules();
 
+// (Compatibilità) Se hai vecchi item salvati senza "sold", lo aggiungiamo al volo
+inventory = inventory.map(it => ({ sold: false, ...it }));
+
 // ====== DOM ======
 const $ = (id) => document.getElementById(id);
 
@@ -155,7 +158,6 @@ searchEbayBtn.addEventListener("click", () => {
   window.open(url, "_blank", "noopener,noreferrer");
 });
 
-
 // ====== Live preview for form (suggested + profit) ======
 const liveInputs = ["buy","sell","cardmarket","ebay"];
 liveInputs.forEach(id => $(id).addEventListener("input", updateLivePreview));
@@ -195,9 +197,13 @@ function updateLivePreview() {
 
   suggestedOut.textContent = suggested > 0 ? eur.format(suggested) : "—";
 
-  // ✅ profitto anche con buy=0 (o in generale buy>=0)
-  // mostriamo profitto se almeno uno tra buy/sell è stato inserito
-  const shouldShow = ($("buy").value.trim() !== "" || $("sell").value.trim() !== "" || $("cardmarket").value.trim() !== "" || $("ebay").value.trim() !== "");
+  // ✅ profitto anche con buy=0
+  const shouldShow = (
+    $("buy").value.trim() !== "" ||
+    $("sell").value.trim() !== "" ||
+    $("cardmarket").value.trim() !== "" ||
+    $("ebay").value.trim() !== ""
+  );
   profitOut.textContent = shouldShow ? eur.format(p) : "—";
   profitOut.className = shouldShow ? profitClass(p) : "";
 }
@@ -220,6 +226,8 @@ form.addEventListener("submit", (e) => {
     buy: round2(toNum($("buy").value)), // ✅ può essere 0
     // if user left blank, we store 0 (we'll use suggested in calculations)
     sell: $("sell").value.trim() === "" ? 0 : round2(toNum($("sell").value)),
+    // ✅ nuovo
+    sold: false,
   };
 
   if (!item.name) return;
@@ -292,7 +300,7 @@ function render() {
     const sellShown = it.sell > 0 ? it.sell : 0;
 
     return `
-      <tr data-id="${it.id}">
+      <tr data-id="${it.id}" class="${it.sold ? "soldRow" : ""}">
         <td>
           <div><strong>${escapeHtml(it.name)}</strong></div>
           <div class="muted small">${escapeHtml(it.lang || "")}</div>
@@ -309,6 +317,14 @@ function render() {
           ${sellShown > 0 ? eur.format(sellShown) : `<span class="muted">auto</span> (${eur.format(it.sellToUse)})`}
         </td>
         <td class="profit ${profCls}">${eur.format(it.profit)}</td>
+
+        <!-- ✅ Nuova colonna Venduto -->
+        <td>
+          <button class="iconBtn soldBtn" data-action="toggleSold" title="Segna venduto/non venduto">
+            ${it.sold ? "SÌ" : "NO"}
+          </button>
+        </td>
+
         <td>
           <button class="iconBtn" data-action="delete" title="Elimina">✕</button>
         </td>
@@ -327,7 +343,7 @@ function render() {
   buyTotalEl.textContent = eur.format(round2(buyTotal));
   profitTotalEl.textContent = eur.format(round2(profitTotal));
 
-  // Bind row actions (delete + inline edit)
+  // Bind row actions (delete + inline edit + sold)
   bindRowEvents();
 }
 
@@ -338,6 +354,22 @@ function bindRowEvents() {
       const id = tr?.dataset?.id;
       if (!id) return;
       inventory = inventory.filter(x => x.id !== id);
+      saveInventory(inventory);
+      render();
+    });
+  });
+
+  // ✅ Toggle sold
+  tbody.querySelectorAll("button[data-action='toggleSold']").forEach(btn => {
+    btn.addEventListener("click", () => {
+      const tr = btn.closest("tr");
+      const id = tr?.dataset?.id;
+      if (!id) return;
+
+      const item = inventory.find(x => x.id === id);
+      if (!item) return;
+
+      item.sold = !item.sold;
       saveInventory(inventory);
       render();
     });
@@ -388,7 +420,6 @@ searchEl.addEventListener("input", render);
 sortByEl.addEventListener("change", render);
 
 // ====== Export con selettore ======
-
 const exportSelector = document.getElementById("exportSelector");
 const cancelExport = document.getElementById("cancelExport");
 
@@ -435,7 +466,6 @@ exportSelector.querySelectorAll("button[data-type]").forEach(btn => {
   });
 });
 
-
 importFile.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
   if (!file) return;
@@ -445,7 +475,7 @@ importFile.addEventListener("change", async (e) => {
     const data = JSON.parse(text);
 
     if (data && Array.isArray(data.inventory)) {
-      inventory = data.inventory;
+      inventory = data.inventory.map(it => ({ sold: false, ...it })); // ✅ compatibilità
       saveInventory(inventory);
     }
     if (data && data.rules) {

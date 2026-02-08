@@ -203,5 +203,13 @@ tbody tr:hover{ background: rgba(255,255,255,.05); }
   display: none;
 }
 
+/* ✅ Venduto: riga “spenta” + bottone evidenziato */
+.soldRow {
+  opacity: 0.6;
+}
+.soldRow .soldBtn {
+  border-color: rgba(98,211,154,.7);
+  background: rgba(98,211,154,.12);
+}
 
 .footer{ padding-bottom: 26px; }
