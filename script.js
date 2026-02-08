@@ -144,8 +144,17 @@ searchCardmarketBtn.addEventListener("click", () => {
 });
 
 searchEbayBtn.addEventListener("click", () => {
-  openGoogleSearch("site:ebay.it");
+  const q = buildSearchQueryForGoogle(); // usa la stessa query "pokemon + nome + set + numero + lingua"
+  if (!q || q === "pokemon") {
+    alert("Compila almeno il nome della carta prima di cercare.");
+    return;
+  }
+
+  // Ricerca diretta su eBay Italia
+  const url = `https://www.ebay.it/sch/i.html?_nkw=${encodeURIComponent(q)}`;
+  window.open(url, "_blank", "noopener,noreferrer");
 });
+
 
 // ====== Live preview for form (suggested + profit) ======
 const liveInputs = ["buy","sell","cardmarket","ebay"];
