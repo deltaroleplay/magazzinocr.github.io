@@ -36,9 +36,6 @@ function round2(n) {
 }
 
 // ====== Suggested price / profit ======
-// Base formula:
-// suggested = buy * (1 + margin) / (1 - fee)
-// profit = sell * (1 - fee) - buy
 function calcSuggested({ buy, cm, ebay, marginPct, feePct, useMarket, capToMarket }) {
   buy = Math.max(0, toNum(buy));
   cm = Math.max(0, toNum(cm));
@@ -55,10 +52,7 @@ function calcSuggested({ buy, cm, ebay, marginPct, feePct, useMarket, capToMarke
   let suggested = base;
 
   if (useMarket && marketAvg > 0) {
-    // almeno 90% della media mercato
     suggested = Math.max(suggested, marketAvg * 0.90);
-
-    // cap opzionale a +10% sulla media
     if (capToMarket) suggested = Math.min(suggested, marketAvg * 1.10);
   }
 
@@ -82,7 +76,7 @@ function profitClass(p) {
 let inventory = loadInventory();
 let rules = loadRules();
 
-// (Compatibilità) Se hai vecchi item salvati senza "sold", lo aggiungiamo al volo
+// Compatibilità: se vecchi item non hanno "sold"
 inventory = inventory.map(it => ({ sold: false, ...it }));
 
 // ====== DOM ======
@@ -106,6 +100,10 @@ const qtyTotalEl = $("qtyTotal");
 const buyTotalEl = $("buyTotal");
 const profitTotalEl = $("profitTotal");
 
+// ✅ nuovi totali
+const profitRealizedEl = $("profitRealized");
+const profitAllEl = $("profitAll");
+
 const exportBtn = $("exportBtn");
 const importFile = $("importFile");
 const clearBtn = $("clearBtn");
@@ -126,7 +124,6 @@ function buildSearchQueryForGoogle() {
   const number = $("number").value.trim();
   const lang = $("lang").value.trim();
 
-  // includo "pokemon" per risultati più puliti
   const parts = ["pokemon", name, set, number, lang].filter(Boolean);
   return parts.join(" ");
 }
@@ -147,13 +144,11 @@ searchCardmarketBtn.addEventListener("click", () => {
 });
 
 searchEbayBtn.addEventListener("click", () => {
-  const q = buildSearchQueryForGoogle(); // usa la stessa query "pokemon + nome + set + numero + lingua"
+  const q = buildSearchQueryForGoogle();
   if (!q || q === "pokemon") {
     alert("Compila almeno il nome della carta prima di cercare.");
     return;
   }
-
-  // Ricerca diretta su eBay Italia
   const url = `https://www.ebay.it/sch/i.html?_nkw=${encodeURIComponent(q)}`;
   window.open(url, "_blank", "noopener,noreferrer");
 });
@@ -197,7 +192,6 @@ function updateLivePreview() {
 
   suggestedOut.textContent = suggested > 0 ? eur.format(suggested) : "—";
 
-  // ✅ profitto anche con buy=0
   const shouldShow = (
     $("buy").value.trim() !== "" ||
     $("sell").value.trim() !== "" ||
@@ -223,10 +217,8 @@ form.addEventListener("submit", (e) => {
     lang: $("lang").value.trim(),
     cardmarket: round2(toNum($("cardmarket").value)),
     ebay: round2(toNum($("ebay").value)),
-    buy: round2(toNum($("buy").value)), // ✅ può essere 0
-    // if user left blank, we store 0 (we'll use suggested in calculations)
+    buy: round2(toNum($("buy").value)),
     sell: $("sell").value.trim() === "" ? 0 : round2(toNum($("sell").value)),
-    // ✅ nuovo
     sold: false,
   };
 
@@ -237,8 +229,6 @@ form.addEventListener("submit", (e) => {
 
   form.reset();
   $("qty").value = 1;
-
-  // reset condizione default
   $("condition").value = "near mint";
 
   updateLivePreview();
@@ -318,7 +308,6 @@ function render() {
         </td>
         <td class="profit ${profCls}">${eur.format(it.profit)}</td>
 
-        <!-- ✅ Nuova colonna Venduto -->
         <td>
           <button class="iconBtn soldBtn" data-action="toggleSold" title="Segna venduto/non venduto">
             ${it.sold ? "SÌ" : "NO"}
@@ -336,14 +325,27 @@ function render() {
   const rowCount = items.length;
   const qtyTotal = items.reduce((s,it)=> s + (it.qty||0), 0);
   const buyTotal = items.reduce((s,it)=> s + (it.buy||0) * (it.qty||1), 0);
-  const profitTotal = items.reduce((s,it)=> s + (it.profit||0) * (it.qty||1), 0);
+
+  // ✅ Potenziale: solo NON vendute
+  const profitPotential = items
+    .filter(it => !it.sold)
+    .reduce((s,it)=> s + (it.profit||0) * (it.qty||1), 0);
+
+  // ✅ Realizzato: solo VENDUTE
+  const profitRealized = items
+    .filter(it => it.sold)
+    .reduce((s,it)=> s + (it.profit||0) * (it.qty||1), 0);
+
+  const profitAll = profitPotential + profitRealized;
 
   rowsCountEl.textContent = String(rowCount);
   qtyTotalEl.textContent = String(qtyTotal);
   buyTotalEl.textContent = eur.format(round2(buyTotal));
-  profitTotalEl.textContent = eur.format(round2(profitTotal));
 
-  // Bind row actions (delete + inline edit + sold)
+  profitTotalEl.textContent = eur.format(round2(profitPotential));
+  if (profitRealizedEl) profitRealizedEl.textContent = eur.format(round2(profitRealized));
+  if (profitAllEl) profitAllEl.textContent = eur.format(round2(profitAll));
+
   bindRowEvents();
 }
 
@@ -359,7 +361,6 @@ function bindRowEvents() {
     });
   });
 
-  // ✅ Toggle sold
   tbody.querySelectorAll("button[data-action='toggleSold']").forEach(btn => {
     btn.addEventListener("click", () => {
       const tr = btn.closest("tr");
@@ -475,7 +476,7 @@ importFile.addEventListener("change", async (e) => {
     const data = JSON.parse(text);
 
     if (data && Array.isArray(data.inventory)) {
-      inventory = data.inventory.map(it => ({ sold: false, ...it })); // ✅ compatibilità
+      inventory = data.inventory.map(it => ({ sold: false, ...it }));
       saveInventory(inventory);
     }
     if (data && data.rules) {
