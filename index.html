@@ -14,9 +14,9 @@
     </div>
 
     <div class="actions">
-      <button id="exportBtn" class="btn">Export JSON</button>
+      <button id="exportBtn" class="btn">Esporta JSON</button>
       <label class="btn btn-secondary file">
-        Import JSON
+        Importa JSON
         <input id="importFile" type="file" accept="application/json" />
       </label>
       <button id="clearBtn" class="btn btn-danger">Svuota tutto</button>
@@ -204,8 +204,25 @@
     </section>
   </main>
 
+
+  <div id="exportSelector" class="export-modal hidden">
+    <div class="export-box">
+      <h3>Esporta come:</h3>
+
+      <div class="export-buttons">
+        <button data-type="pokemon" class="btn">Pokémon</button>
+        <button data-type="onepiece" class="btn">One Piece</button>
+        <button data-type="yugioh" class="btn">Yu-Gi-Oh!</button>
+      </div>
+
+      <button id="cancelExport" class="btn btn-secondary">
+        Annulla
+      </button>
+    </div>
+  </div>
+
   <footer class="wrap footer muted small">
-    Dati salvati nel browser (localStorage). Fai Export per un backup.
+    Dati salvati nel browser (localStorage). Esporta per un backup.
   </footer>
 
   <script src="script.js"></script>

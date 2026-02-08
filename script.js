@@ -387,25 +387,54 @@ function startInlineEdit(td) {
 searchEl.addEventListener("input", render);
 sortByEl.addEventListener("change", render);
 
-// ====== Export / Import ======
-exportBtn.addEventListener("click", () => {
-  const payload = {
-    version: 1,
-    exportedAt: new Date().toISOString(),
-    rules,
-    inventory
-  };
-  const blob = new Blob([JSON.stringify(payload, null, 2)], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
+// ====== Export con selettore ======
 
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = `magazzino-pokemon-${new Date().toISOString().slice(0,10)}.json`;
-  document.body.appendChild(a);
-  a.click();
-  a.remove();
-  URL.revokeObjectURL(url);
+const exportSelector = document.getElementById("exportSelector");
+const cancelExport = document.getElementById("cancelExport");
+
+exportBtn.addEventListener("click", () => {
+  exportSelector.classList.remove("hidden");
 });
+
+cancelExport.addEventListener("click", () => {
+  exportSelector.classList.add("hidden");
+});
+
+exportSelector.querySelectorAll("button[data-type]").forEach(btn => {
+  btn.addEventListener("click", () => {
+
+    const type = btn.getAttribute("data-type");
+
+    const payload = {
+      version: 1,
+      type: type,
+      exportedAt: new Date().toISOString(),
+      rules,
+      inventory
+    };
+
+    const blob = new Blob([JSON.stringify(payload, null, 2)], {
+      type: "application/json"
+    });
+
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+
+    const date = new Date().toISOString().slice(0,10);
+
+    a.download = `magazzino-${type}-${date}.json`;
+
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    exportSelector.classList.add("hidden");
+  });
+});
+
 
 importFile.addEventListener("change", async (e) => {
   const file = e.target.files?.[0];
