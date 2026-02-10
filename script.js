@@ -100,7 +100,7 @@ const qtyTotalEl = $("qtyTotal");
 const buyTotalEl = $("buyTotal");
 const profitTotalEl = $("profitTotal");
 
-// ✅ nuovi totali
+// ✅ nuovi totali test
 const profitRealizedEl = $("profitRealized");
 const profitAllEl = $("profitAll");
 
