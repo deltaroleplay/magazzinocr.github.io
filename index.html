@@ -1,0 +1,234 @@
+<!doctype html>
+<html lang="it">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Magazzino Carte</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <header class="wrap header">
+    <div>
+      <h1>Magazzino Carte</h1>
+      <p class="muted">Inserisci carte, traccia i prezzi e calcola rivendita/profitto.</p>
+    </div>
+
+    <div class="actions">
+      <button id="exportBtn" class="btn">Esporta JSON</button>
+      <label class="btn btn-secondary file">
+        Importa JSON
+        <input id="importFile" type="file" accept="application/json" />
+      </label>
+      <button id="clearBtn" class="btn btn-danger">Svuota tutto</button>
+    </div>
+  </header>
+
+  <main class="wrap grid">
+    <section class="card">
+      <h2>Nuova carta</h2>
+
+      <form id="cardForm" class="form">
+        <div class="row">
+          <label>
+            Nome carta *
+            <input id="name" type="text" placeholder="Es. Charizard" required />
+          </label>
+          <label>
+            Set / Espansione
+            <input id="set" type="text" placeholder="Es. Base Set" />
+          </label>
+        </div>
+
+        <div class="row">
+          <label>
+            Numero
+            <input id="number" type="text" placeholder="Es. 4/102" />
+          </label>
+          <label>
+            Condizione
+            <select id="condition">
+              <option value="poor">poor</option>
+              <option value="played">played</option>
+              <option value="light played">light played</option>
+              <option value="good">good</option>
+              <option value="excellent">excellent</option>
+              <option value="near mint" selected>near mint</option>
+              <option value="mint">mint</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="row">
+          <label>
+            Quantità
+            <input id="qty" type="number" min="1" step="1" value="1" required />
+          </label>
+          <label>
+            Lingua
+            <input id="lang" type="text" placeholder="Es. ITA / ENG / JPN" />
+          </label>
+        </div>
+
+        <hr class="sep" />
+
+        <div class="row">
+          <label>
+            Prezzo Cardmarket (€)
+            <input id="cardmarket" type="number" min="0" step="0.01" placeholder="0.00" />
+          </label>
+          <label>
+            Prezzo eBay (€)
+            <input id="ebay" type="number" min="0" step="0.01" placeholder="0.00" />
+          </label>
+        </div>
+
+        <!-- ✅ Nuovi tasti Google -->
+        <div class="row">
+          <button type="button" id="searchCardmarketBtn" class="btn btn-secondary">
+            Cerca su Google (Cardmarket)
+          </button>
+          <button type="button" id="searchEbayBtn" class="btn btn-secondary">
+            Cerca su eBay
+          </button>
+        </div>
+
+        <div class="row">
+          <label>
+            Prezzo d’acquisto (€) *
+            <input id="buy" type="number" min="0" step="0.01" placeholder="0.00" required />
+          </label>
+          <label>
+            Prezzo di rivendita (manuale) (€)
+            <input id="sell" type="number" min="0" step="0.01" placeholder="Lascia vuoto per usare il consigliato" />
+          </label>
+        </div>
+
+        <div class="hint">
+          <div><strong>Consigliato:</strong> <span id="suggestedOut">—</span></div>
+          <div><strong>Profitto stimato:</strong> <span id="profitOut">—</span></div>
+        </div>
+
+        <div class="row end">
+          <button class="btn" type="submit">Aggiungi al magazzino</button>
+        </div>
+      </form>
+    </section>
+
+    <aside class="card">
+      <h2>Regole di calcolo</h2>
+
+      <div class="form">
+        <div class="row">
+          <label>
+            Margine desiderato (%)
+            <input id="marginPct" type="number" min="0" step="0.1" value="20" />
+          </label>
+          <label>
+            Fee marketplace (%)
+            <input id="feePct" type="number" min="0" step="0.1" value="0" />
+          </label>
+        </div>
+
+        <label class="checkbox">
+          <input id="useMarket" type="checkbox" checked />
+          Usa anche i prezzi di mercato (Cardmarket/eBay) per non scendere troppo
+        </label>
+
+        <label class="checkbox">
+          <input id="capToMarket" type="checkbox" />
+          Limita il consigliato a massimo +10% sopra la media di mercato
+        </label>
+
+        <p class="muted small">
+          Formula base (senza mercato):<br/>
+          <code>prezzoConsigliato = acquisto * (1 + margine) / (1 - fee)</code><br/>
+          Profitto stimato: <code>rivendita * (1 - fee) - acquisto</code>
+        </p>
+
+        <hr class="sep" />
+
+        <h3>Ricerca & ordinamento</h3>
+        <div class="row">
+          <label>
+            Cerca
+            <input id="search" type="text" placeholder="Nome, set, numero..." />
+          </label>
+          <label>
+            Ordina per
+            <select id="sortBy">
+              <option value="createdAt_desc">Più recenti</option>
+              <option value="name_asc">Nome A→Z</option>
+              <option value="profit_desc">Profitto ↓</option>
+              <option value="buy_desc">Acquisto ↓</option>
+              <option value="sell_desc">Rivendita ↓</option>
+            </select>
+          </label>
+        </div>
+
+        <div class="totals">
+          <div><span class="muted">Carte (righe):</span> <strong id="rowsCount">0</strong></div>
+          <div><span class="muted">Quantità totale:</span> <strong id="qtyTotal">0</strong></div>
+          <div><span class="muted">Costo totale:</span> <strong id="buyTotal">€0,00</strong></div>
+
+          <div><span class="muted">Profitto potenziale (non vendute):</span> <strong id="profitTotal">€0,00</strong></div>
+          <div><span class="muted">Profitto realizzato (vendute):</span> <strong id="profitRealized">€0,00</strong></div>
+          <div><span class="muted">Profitto totale:</span> <strong id="profitAll">€0,00</strong></div>
+        </div>
+      </div>
+    </aside>
+
+    <section class="card wide">
+      <div class="tableHead">
+        <h2>Inventario</h2>
+        <p class="muted small">Click sulle celle Rivendita per modificarla al volo.</p>
+      </div>
+
+      <div class="tableWrap">
+        <table id="table">
+          <thead>
+            <tr>
+              <th>Nome</th>
+              <th>Set</th>
+              <th>N°</th>
+              <th>Cond.</th>
+              <th>Qtà</th>
+              <th>CM (€)</th>
+              <th>eBay (€)</th>
+              <th>Acquisto (€)</th>
+              <th>Consigliato (€)</th>
+              <th>Rivendita (€)</th>
+              <th>Profitto (€)</th>
+              <th>Venduto</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="tbody"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+
+  <div id="exportSelector" class="export-modal hidden">
+    <div class="export-box">
+      <h3>Esporta come:</h3>
+
+      <div class="export-buttons">
+        <button data-type="pokemon" class="btn">Pokémon</button>
+        <button data-type="onepiece" class="btn">One Piece</button>
+        <button data-type="yugioh" class="btn">Yu-Gi-Oh!</button>
+      </div>
+
+      <button id="cancelExport" class="btn btn-secondary">
+        Annulla
+      </button>
+    </div>
+  </div>
+
+  <footer class="wrap footer muted small">
+    Dati salvati nel browser. Esporta per un backup.
+  </footer>
+
+  <script src="script.js"></script>
+</body>
+</html>
