@@ -124,16 +124,13 @@ function buildSearchQueryForGoogle() {
   const number = $("number").value.trim();
   const lang = $("lang").value.trim();
 
-  const parts = ["pokemon", name, set, number, lang].filter(Boolean);
+  const parts = [name, set, number, lang].filter(Boolean);
   return parts.join(" ");
 }
 
 function openGoogleSearch(siteFilter) {
   const q = buildSearchQueryForGoogle();
-  if (!q || q === "pokemon") {
-    alert("Compila almeno il nome della carta prima di cercare.");
-    return;
-  }
+
   const fullQuery = `${q} ${siteFilter}`;
   const url = `https://www.google.com/search?q=${encodeURIComponent(fullQuery)}`;
   window.open(url, "_blank", "noopener,noreferrer");
@@ -145,10 +142,7 @@ searchCardmarketBtn.addEventListener("click", () => {
 
 searchEbayBtn.addEventListener("click", () => {
   const q = buildSearchQueryForGoogle();
-  if (!q || q === "pokemon") {
-    alert("Compila almeno il nome della carta prima di cercare.");
-    return;
-  }
+
   const url = `https://www.ebay.it/sch/i.html?_nkw=${encodeURIComponent(q)}`;
   window.open(url, "_blank", "noopener,noreferrer");
 });
